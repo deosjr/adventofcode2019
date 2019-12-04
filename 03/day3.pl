@@ -30,34 +30,34 @@ segment_loop([Instr|T], [S|TSegments], X, Y, Distance) :-
     NDistance #= Distance + N,
     segment_loop(T, TSegments, NX, NY, NDistance). 
 
-find_min_collision(D1, D2, CollisionFunc, Out) :-
+find_min_collision(D1, D2, ResultFunc, Out) :-
     findall(X,
     (
     select(S1, D1, _),
     select(S2, D2, _),
-    call(CollisionFunc, S1, S2, X)
+    call(collision, S1, S2, ResultFunc, X)
     ),
     Delay),
     foldl([A,B,C]>>(C#=min(A,B)), Delay, 99999, Out).
     
 
-collision(W, V, M) :-
+collision(W, V, ResultFunc, M) :-
     W.fixed_axis \= V.fixed_axis,
     ((W.begin #< V.fixed, W.end #> V.fixed) ; (W.end #< V.fixed, W.begin #> V.fixed)),
     ((V.begin #< W.fixed, V.end #> W.fixed) ; (V.end #< W.fixed, V.begin #> W.fixed)),
+    call(ResultFunc, W, V, M).
+
+result1(W, V, M) :-
     M #= abs(W.fixed) + abs(V.fixed).
 
-collision2(W, V, M) :-
-    W.fixed_axis \= V.fixed_axis,
-    ((W.begin #< V.fixed, W.end #> V.fixed) ; (W.end #< V.fixed, W.begin #> V.fixed)),
-    ((V.begin #< W.fixed, V.end #> W.fixed) ; (V.end #< W.fixed, V.begin #> W.fixed)),
+result2(W, V, M) :-
     M #= W.distance_start + abs(V.fixed - W.begin) + V.distance_start + abs(W.fixed - V.begin).
 
 part1(D1, D2, Out) :-
-    find_min_collision(D1, D2, collision, Out).
+    find_min_collision(D1, D2, result1, Out).
 
 part2(D1, D2, Out) :-
-    find_min_collision(D1, D2, collision2, Out).
+    find_min_collision(D1, D2, result2, Out).
 
 run :-
     input([Wire1, Wire2]),
