@@ -48,8 +48,7 @@ fn run_program(program: &Vec<i32>, input: i32) -> Option<i32>{
                 ip += 2;
             },
             4 => {
-                let x = value(&mem, opcode_raw, ip, 1);
-                last_output = x;
+                last_output = value(&mem, opcode_raw, ip, 1);
                 ip += 2;
             },
             5 => {
