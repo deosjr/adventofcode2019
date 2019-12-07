@@ -31,15 +31,15 @@ impl Amplifier {
         self.input.push_back(i);
     }
 
-    fn run(&mut self) -> (i32, bool) {
+    fn get_output(&mut self) -> Option<i32> {
+        self.output.pop()
+    }
+
+    fn run(&mut self) {
         self.run_program();
         if self.error {
             panic!();
         }
-        if self.halted {
-            return (0, true)
-        }
-        (self.output.pop().unwrap(), false)
     }
 
     fn run_program(&mut self) {
@@ -165,8 +165,8 @@ fn run_amplifiers(program: &Vec<i32>, phases: Vec<i32>) -> i32 {
         let mut amp = Amplifier::new(program);
         amp.give_input(p);
         amp.give_input(input);
-        let (output, _) = amp.run();
-        input = output; 
+        amp.run();
+        input = amp.get_output().unwrap(); 
     }
     input
 }
@@ -198,15 +198,15 @@ fn run_amplifiers_with_feedback(program: &Vec<i32>, phases: Vec<i32>) -> i32 {
     }
     let mut last_output = 0;
     for i in (0..5).cycle() {
-        let (out, halted) = amps[i].run();
-        if halted {
+        amps[i].run();
+        if amps[i].halted {
             if i==4 {
                 break
             }
             continue
         }
-        last_output = out;
-        amps[(i+1)%5].give_input(out);
+        last_output = amps[i].get_output().unwrap();
+        amps[(i+1)%5].give_input(last_output);
     }
     last_output 
 }

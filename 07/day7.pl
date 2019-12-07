@@ -39,52 +39,51 @@ mod_mod_imm(Mem, First, Index, X, Y, Z) :-
     pos_or_imm(Mem, First, Index, 2, Y),
     imm(Mem, Index, 3, Z).
 
-opcode(1, First, Mem, Input, Index, Ans, NAns) :-
+opcode(1, First, Mem, NewMem, Input, RemInput, Index, NewIndex, Output, Halted) :-
     mod_mod_imm(Mem, First, Index, X, Y, Z),
     New #= X+Y, 
     set(Z, Mem, New, NMem), 
     NIndex #= Index+4, 
-    run(NMem, Input, NIndex, Ans, NAns).
+    run(NMem, NewMem, Input, RemInput, NIndex, NewIndex, Output, Halted).
 
-opcode(2, First, Mem, Input, Index, Ans, NAns) :-
+opcode(2, First, Mem, NewMem, Input, RemInput, Index, NewIndex, Output, Halted) :-
     mod_mod_imm(Mem, First, Index, X, Y, Z),
     New #= X*Y, 
     set(Z, Mem, New, NMem), 
     NIndex #= Index+4, 
-    run(NMem, Input, NIndex, Ans, NAns).
+    run(NMem, NewMem, Input, RemInput, NIndex, NewIndex, Output, Halted).
 
-opcode(3, _, Mem, [Input|RInput], Index, Ans, NAns) :-
+opcode(3, _, Mem, NewMem, [Input|RInput], RemInput, Index, NewIndex, Output, Halted) :-
     imm(Mem, Index, 1, X),
     set(X, Mem, Input, NMem), 
     NIndex #= Index+2, 
-    run(NMem, RInput, NIndex, Ans, NAns).
+    run(NMem, NewMem, RInput, RemInput, NIndex, NewIndex, Output, Halted).
 
-opcode(4, First, Mem, Input, Index, _, NAns) :-
+opcode(4, First, Mem, Mem, Input, Input, Index, NIndex, Output, false) :-
     pos_or_imm(Mem, First, Index, 1, Output),
-    NIndex #= Index+2, 
-    run(Mem, Input, NIndex, Output, NAns).
+    NIndex #= Index+2. 
 
-opcode(5, First, Mem, Input, Index, Ans, NAns) :-
+opcode(5, First, Mem, NewMem, Input, RemInput, Index, NewIndex, Output, Halted) :-
     mod_mod(Mem, First, Index, X, Y),
     ( X #\= 0
     ->
-        run(Mem, Input, Y, Ans, NAns)
+        run(Mem, NewMem, Input, RemInput, Y, NewIndex, Output, Halted)
     ;
         NIndex #= Index+3,
-        run(Mem, Input, NIndex, Ans, NAns)
+        run(Mem, NewMem, Input, RemInput, NIndex, NewIndex, Output, Halted)
     ).
 
-opcode(6, First, Mem, Input, Index, Ans, NAns) :-
+opcode(6, First, Mem, NewMem, Input, RemInput, Index, NewIndex, Output, Halted) :-
     mod_mod(Mem, First, Index, X, Y),
     ( X #= 0
     ->
-        run(Mem, Input, Y, Ans, NAns)
+        run(Mem, NewMem, Input, RemInput, Y, NewIndex, Output, Halted)
     ;
         NIndex #= Index+3,
-        run(Mem, Input, NIndex, Ans, NAns)
+        run(Mem, NewMem, Input, RemInput, NIndex, NewIndex, Output, Halted)
     ).
 
-opcode(7, First, Mem, Input, Index, Ans, NAns) :-
+opcode(7, First, Mem, NewMem, Input, RemInput, Index, NewIndex, Output, Halted) :-
     mod_mod_imm(Mem, First, Index, X, Y, Z),
     ( X #< Y
     ->
@@ -93,9 +92,9 @@ opcode(7, First, Mem, Input, Index, Ans, NAns) :-
         set(Z, Mem, 0, NMem)
     ),
     NIndex #= Index+4, 
-    run(NMem, Input, NIndex, Ans, NAns).
+    run(NMem, NewMem, Input, RemInput, NIndex, NewIndex, Output, Halted).
 
-opcode(8, First, Mem, Input, Index, Ans, NAns) :-
+opcode(8, First, Mem, NewMem, Input, RemInput, Index, NewIndex, Output, Halted) :-
     mod_mod_imm(Mem, First, Index, X, Y, Z),
     ( X #= Y
     ->
@@ -104,17 +103,14 @@ opcode(8, First, Mem, Input, Index, Ans, NAns) :-
         set(Z, Mem, 0, NMem)
     ),
     NIndex #= Index+4, 
-    run(NMem, Input, NIndex, Ans, NAns).
+    run(NMem, NewMem, Input, RemInput, NIndex, NewIndex, Output, Halted).
 
-opcode(99, _, _, _, _, X, X).
+opcode(99, _, _, _, _, _, _, _, _, true).
 
-run(Mem, Input, Index, Ans, NAns) :-
+run(Mem, NewMem, Input, RemInput, Index, NIndex, Output, Halted) :-
     nth0(Index, Mem, First),
     Opcode #= First mod 100,
-    opcode(Opcode, First, Mem, Input, Index, Ans, NAns).
-
-run(Program, Input, Ans) :-
-    run(Program, Input, 0, -1, Ans).
+    opcode(Opcode, First, Mem, NewMem, Input, RemInput, Index, NIndex, Output, Halted).
 
 phases(Phases, Min, Max) :-
     length(Phases, 5),
@@ -123,7 +119,7 @@ phases(Phases, Min, Max) :-
 
 run_amps(_, [], X, X).
 run_amps(Program, [Phase|RPhases], Input, Output) :-
-    run(Program, [Phase, Input], Temp),
+    run(Program, _, [Phase, Input], _, 0, _, Temp, _),
     run_amps(Program, RPhases, Temp, Output).
 
 part1(Program, Out) :-
@@ -131,10 +127,28 @@ part1(Program, Out) :-
     findall(Ans, run_amps(Program, Phases, 0, Ans), Answers),
     max_list(Answers, Out).
 
-% TODO
+run_amps_with_feedback(Amps, AmpsPtr, LastOutput, Ans) :-
+    nth0(AmpsPtr, Amps, Amp),
+    Amp = Mem-Index-Input,
+    run(Mem, NewMem, Input, NewInput, Index, NewIndex, Output, Halted),
+    ( Halted=true
+    ->
+        Ans = LastOutput
+    ;
+        NAmpsPtr #= (AmpsPtr+1) mod 5, 
+        select(Amp, Amps, NewMem-NewIndex-NewInput, TempAmps),
+        nth0(NAmpsPtr, Amps, Amp2),
+        Amp2 = Mem2-Index2-Input2,
+        append(Input2, [Output], NInput2),
+        select(Amp2, TempAmps, Mem2-Index2-NInput2, NewAmps),
+        run_amps_with_feedback(NewAmps, NAmpsPtr, Output, Ans)
+    ).
+
 part2(Program, Out) :-
-    Out=42.
-    %phases(Phases, 5, 9),
+    phases([P1, P2, P3, P4, P5], 5, 9),
+    Amplifiers = [Program-0-[P1,0],Program-0-[P2],Program-0-[P3],Program-0-[P4],Program-0-[P5]],
+    findall(Ans, run_amps_with_feedback(Amplifiers, 0, -1, Ans), Answers),
+    max_list(Answers, Out).
 
 run :-
     parse(Program),
