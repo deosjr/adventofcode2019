@@ -34,7 +34,7 @@ apply_layer([HLayer|TLayer], [HImage|TImage], Out) :-
 part2(Layers) :-
     length(Image, 150),
     foldl(apply_layer, Layers, Image, Out),
-    maplist([In, Out]>>(In=1->Out='x';Out=' '), Out, Ascii),
+    maplist([In, Out]>>(In=1->Out='\u2588';Out=' '), Out, Ascii),
     layers(Ascii, Img, 25),
     maplist([In]>>(string_chars(Str, In), writeln(Str)), Img).
 
