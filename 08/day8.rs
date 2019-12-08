@@ -6,7 +6,7 @@ fn parse(filename: &str) -> io::Result<Vec<usize>> {
     let mut file = File::open(filename)?;
     let mut input = String::new();
     file.read_to_string(&mut input)?;
-    let v: Vec<usize> = input.trim_end().chars().map(|c| c.to_digit(10).unwrap() as usize).collect();
+    let v = input.trim_end().chars().map(|c| c.to_digit(10).unwrap() as usize).collect::<Vec<_>>();
     Ok(v)
 }
 
@@ -40,8 +40,7 @@ fn part2(input: &Vec<usize>) {
         }
     }
     for row in image.chunks(25) {
-        let prettyprint: Vec<char> = row.iter().map(|&x| if x==0 { ' ' } else { '\u{2588}' }).collect();
-        let s: String = prettyprint.into_iter().collect();
+        let s = row.iter().map(|&x| if x==0 { ' ' } else { '\u{2588}' }).collect::<String>();
         println!("{}", s);
     }
 }
