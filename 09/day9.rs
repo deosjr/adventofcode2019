@@ -84,10 +84,10 @@ impl Program {
                 2 => self.multiply(modes),
                 3 => self.read(modes),
                 4 => { self.write(modes); return },
-                5 => self.not_zero(modes), 
-                6 => self.is_zero(modes), 
-                7 => self.jump_if_less(modes), 
-                8 => self.jump_if_equal(modes), 
+                5 => self.jump_if_not_zero(modes), 
+                6 => self.jump_if_zero(modes), 
+                7 => self.less(modes), 
+                8 => self.equal(modes), 
                 9 => self.set_relative_base(modes),
                 99 => { self.halted = true; return },
                 _ => { self.error = true; return },
@@ -126,19 +126,19 @@ impl Program {
         self.iptr += 2;
     }
 
-    fn not_zero(&mut self, opcode_raw: i64) {
+    fn jump_if_not_zero(&mut self, opcode_raw: i64) {
         let x = self.value(opcode_raw, 1);
         let y = self.value(opcode_raw, 2);
         self.iptr = if x != 0 { y } else { self.iptr+3 };
     }
 
-    fn is_zero(&mut self, opcode_raw: i64) {
+    fn jump_if_zero(&mut self, opcode_raw: i64) {
         let x = self.value(opcode_raw, 1);
         let y = self.value(opcode_raw, 2);
         self.iptr = if x == 0 { y } else { self.iptr+3 };
     }
 
-    fn jump_if_less(&mut self, opcode_raw: i64) {
+    fn less(&mut self, opcode_raw: i64) {
         let x = self.value(opcode_raw, 1);
         let y = self.value(opcode_raw, 2);
         let z = self.addr(opcode_raw, 3); 
@@ -146,7 +146,7 @@ impl Program {
         self.iptr += 4;
     }
 
-    fn jump_if_equal(&mut self, opcode_raw: i64) {
+    fn equal(&mut self, opcode_raw: i64) {
         let x = self.value(opcode_raw, 1);
         let y = self.value(opcode_raw, 2);
         let z = self.addr(opcode_raw, 3); 
