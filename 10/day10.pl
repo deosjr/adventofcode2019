@@ -64,14 +64,52 @@ part1(Asteroids, Ans, StationX, StationY) :-
     maplist({Asteroids}/[A, D-A]>>(selectchk(A, Asteroids, Rem), detect(A, Rem, D)), Asteroids, List),
     max_member(Ans-(StationX-StationY), List).
 
-part2(Asteroids, SX, SY, Out) :-
-    % maplist Asteroids to Order-Asteroid
-    % collect Asteroids with same order in one list under key
-    % sort the list by Order
-    % cycle through the list and consume asteroids
-    % return the 200th asteroid consumed
-    % TODO:
-    Out = 42.
+order(X-Y, O) :-
+    Len is sqrt(X*X + Y*Y),
+    Acos is floor(acos(Y / Len) * 10000),
+    ( X #>= 0
+    ->
+        O is Acos
+    ;
+        O is -Acos
+    ).
+
+manhattan_sort(=, X-Y, X2-Y2) :-
+    abs(X) + abs(Y) #= abs(X2) + abs(Y2).
+manhattan_sort(>, X-Y, X2-Y2) :-
+    abs(X) + abs(Y) #> abs(X2) + abs(Y2).
+manhattan_sort(<, X-Y, X2-Y2) :-
+    abs(X) + abs(Y) #< abs(X2) + abs(Y2).
+
+vaporize(Asteroids, Index, 1, X-Y) :-
+    nth0(Index, Asteroids, [X-Y|_]).
+
+vaporize(Asteroids, Index, Rem, Nth) :-
+    length(Asteroids, Index),
+    vaporize(Asteroids, 0, Rem, Nth).
+
+vaporize(Asteroids, Index, Rem, Nth) :-
+    nth0(Index, Asteroids, [_|RestList], RestAsteroids),
+    NRem #= Rem - 1,
+    ( RestList = []
+    ->
+        vaporize(RestAsteroids, Index, NRem, Nth)
+    ;
+        nth0(Index, NewAsteroids, RestList, RestAsteroids),
+        NIndex #= Index + 1,
+        vaporize(NewAsteroids, NIndex, NRem, Nth)
+    ).
+
+part2(Asteroids, SX, SY, Ans) :-
+    selectchk(SX-SY, Asteroids, Rest),
+    maplist({SX, SY}/[X-Y, RX-RY]>>(RX #= X-SX, RY #= Y-SY), Rest, Relative),
+    maplist([In, O-In]>>order(In, O), Relative, Ordered),
+    keysort(Ordered, KeySorted),
+    group_pairs_by_key(KeySorted, Collected),
+    maplist([O-List, SubSorted]>>predsort(manhattan_sort, List, SubSorted), Collected, Sorted),
+    reverse(Sorted, Reverse),
+    vaporize(Reverse, 0, 200, X-Y),
+    Ans #= 100 * (X+SX) + Y+SY.
 
 run :-
     input(Asteroids),
