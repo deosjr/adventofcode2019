@@ -17,8 +17,12 @@ impl Coord {
         ((self.x*self.x + self.y*self.y) as f64).sqrt()
     }
 
-    fn unit_y(self) -> f64 {
-        self.y as f64 / self.length()
+    fn order(self) -> i32 {
+        let unit_y = self.y as f64 / self.length();
+        let acos = unit_y.acos();
+        let o = if self.x >= 0 { acos  } else {  -acos  };
+        // we only need to check collisions up to a few decimals
+        (o * 10000.) as i32
     }
 }
 
@@ -66,9 +70,8 @@ fn collision(m: &HashMap<Coord,i32>, from: Coord, to: Coord, steps: Coord) -> bo
     }
 }
 
-fn main() {
-    let reader = read_file("day10.input").unwrap();
-    let m = parse(reader);
+// TODO: map is never updated cause borrowing is hard :(
+fn part1(m: &HashMap<Coord, i32>) -> (Coord, i32) {
     let mut max = 0;
     let mut station = Coord::new(-1, -1);
     for (&from, _) in m.iter() {
@@ -91,20 +94,22 @@ fn main() {
             station = from;
         }
     }
-    println!("Part 1: {}", max);
+    (station, max)
+}
+
+fn part2(m: &HashMap<Coord, i32>, station: Coord) -> i32 {
     let mut order: HashMap<i32, Vec<Coord>> = HashMap::new();
     for (&asteroid, _) in m.iter() {
         if asteroid == station {
             continue
         }
         let relative = Coord::new(asteroid.x - station.x, asteroid.y - station.y);
-        let acos = relative.unit_y().acos();
-        let o = if relative.x >= 0 { acos  } else {  -acos  };
-        if let Some(v) = order.get_mut(&((o*10000.) as i32)) {
+        let o = relative.order();
+        if let Some(v) = order.get_mut(&o) {
             v.push(relative);
             v.sort_by(|a, b| (a.x.abs()+a.y.abs()).cmp(&(b.x.abs()+b.y.abs())).reverse());
         } else {
-            order.insert((o*10000.) as i32, vec![relative]);
+            order.insert(o, vec![relative]);
         }
     }
 
@@ -120,9 +125,16 @@ fn main() {
         let asteroid = v.pop().unwrap();
         i += 1;
         if i == 200 {
-            println!("Part 2: {}", (asteroid.x + station.x) * 100 + asteroid.y + station.y);
-            break
+            return (asteroid.x + station.x) * 100 + asteroid.y + station.y;
         }
     }
+    -1
+}
 
+fn main() {
+    let reader = read_file("day10.input").unwrap();
+    let m = parse(reader);
+    let (station, out1) = part1(&m);
+    println!("Part 1: {}", out1);
+    println!("Part 2: {}", part2(&m, station));
 }
