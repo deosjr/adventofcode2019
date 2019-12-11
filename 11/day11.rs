@@ -196,7 +196,7 @@ impl Coord {
 fn run_robot(brain: &HashMap<i64, i64>, panels: &mut HashMap<Coord, i64>) {
     let mut program = Program::new(&brain);
     let mut pos = Coord::new(0, 0);
-    let mut direction = Coord::new(0, -1);
+    let mut direction = Coord::new(0, 1);
     while !program.halted {
         let camera = panels.get(&pos).or(Some(&0)).unwrap();
         program.give_input(*camera);
@@ -238,7 +238,7 @@ fn main() {
         }
     }
     println!("Part 2: ");
-    for y in mincoords.y..maxcoords.y+1 {
+    for y in (mincoords.y..maxcoords.y+1).rev() {
         for x in mincoords.x..maxcoords.x+1 {
             let camera = panels_single_white.get(&Coord::new(x,y)).or(Some(&0)).unwrap();
             match camera {
