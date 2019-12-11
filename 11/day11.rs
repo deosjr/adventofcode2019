@@ -42,12 +42,6 @@ impl Program {
         }
     }
 
-    fn run_to_halt(&mut self) {
-        while !self.halted {
-            self.run();
-        }
-    }
-
     fn value(&mut self, raw: i64, pos: u32) -> i64 {
         let mode = (raw / (10_i64.pow(pos-1))) % 10;
         match mode {
@@ -199,10 +193,8 @@ impl Coord {
     }
 }
 
-fn main() {
-    let input = parse("day11.input").unwrap();
-    let mut program = Program::new(&input);
-    let mut panels = HashMap::new();
+fn run_robot(brain: &HashMap<i64, i64>, panels: &mut HashMap<Coord, i64>) {
+    let mut program = Program::new(&brain);
     let mut pos = Coord::new(0, 0);
     let mut direction = Coord::new(0, -1);
     while !program.halted {
@@ -219,5 +211,42 @@ fn main() {
         pos.x += direction.x;
         pos.y += direction.y;
     }
+}
+
+fn main() {
+    let input = parse("day11.input").unwrap();
+    let mut panels = HashMap::new();
+    run_robot(&input, &mut panels);
     println!("Part 1: {}", panels.len());
+    let mut panels_single_white = HashMap::new();
+    panels_single_white.insert(Coord::new(0,0), 1);
+    run_robot(&input, &mut panels_single_white);
+    let mut mincoords = Coord::new(std::i32::MAX, std::i32::MAX); 
+    let mut maxcoords = Coord::new(std::i32::MIN, std::i32::MIN); 
+    for k in panels_single_white.keys() {
+        if k.x < mincoords.x {
+            mincoords.x = k.x;
+        }
+        if k.y < mincoords.y {
+            mincoords.y = k.y;
+        }
+        if k.x > maxcoords.x {
+            maxcoords.x = k.x;
+        }
+        if k.y > maxcoords.y {
+            maxcoords.y = k.y;
+        }
+    }
+    println!("Part 2: ");
+    for y in mincoords.y..maxcoords.y+1 {
+        for x in mincoords.x..maxcoords.x+1 {
+            let camera = panels_single_white.get(&Coord::new(x,y)).or(Some(&0)).unwrap();
+            match camera {
+                0 => print!(" "),
+                1 => print!("\u{2588}"),
+                _ => panic!()
+            }
+        }
+        println!("");
+    }
 }
