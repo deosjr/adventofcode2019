@@ -20,7 +20,9 @@ new_program(Program, Config) :-
     Config = [ [], 0, 0, [] ].
 
 give_input(In, [Input, Index, RB, Out], [NewInput, Index, RB, Out]) :-
-    append(Input, In, NewInput).
+    append(Input, [In], NewInput).
+
+get_output([Input, Index, RB, Output], [Input, Index, RB, []], Output).
 
 set(Index, Value) :-
     retractall(mem(Index,_)),
