@@ -59,8 +59,34 @@ run_robot(Program, PanelsIn, PanelsOut) :-
     paint_loop(0-0, 0-1, ProgramConfig, PanelsIn, PanelsOut),
     clean_mem.
 
+bounds(Panels, MinX-MinY, MaxX-MaxY) :-
+    maplist([X-_-_, Z]>>(Z=X), Panels, Xs),
+    min_list(Xs, MinX),
+    max_list(Xs, MaxX),
+    maplist([_-Y-_, Z]>>(Z=Y), Panels, Ys),
+    min_list(Ys, MinY),
+    max_list(Ys, MaxY).
+
+print(_, _-A, _-Y) :- A #= Y+1.
+print(Panels, MinX-MinY, MaxX-MaxY) :-
+    Len #= MaxX - MinX + 1,
+    length(Xs, Len),
+    Xs ins MinX..MaxX,
+    chain(Xs, #<),
+    all_distinct(Xs),
+    maplist({Panels, MaxY}/[In,Out]>>camera(In-MaxY, Panels, Out), Xs, Line),
+    maplist([In, Out]>>(In=1->Out='\u2588';Out=' '), Line, Ascii),
+    string_chars(Str, Ascii),
+    writeln(Str),
+    NMaxY #= MaxY - 1,
+    print(Panels, MinX-MinY, MaxX-NMaxY).
+
 run :-
     parse(Program),
     run_robot(Program, [], Panels),
     length(Panels, N),
-    format("Part 1: ~w~n", [N]).
+    format("Part 1: ~w~n", [N]),
+    run_robot(Program, [0-0-1], PanelsSingleWhite),
+    bounds(PanelsSingleWhite, MinX-MinY, MaxX-MaxY),
+    print(PanelsSingleWhite, MinX-MinY, MaxX-MaxY).
+
