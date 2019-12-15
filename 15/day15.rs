@@ -49,7 +49,7 @@ impl Coord {
     }
 }
 
-fn print(grid: &HashMap<Coord, i64>) {
+fn print(grid: &HashMap<Coord, i64>, dists: &HashMap<Coord, u32>) {
     println!("----------------------");
     for y in (-30..30).rev() {
         for x in -30..30 {
@@ -60,7 +60,7 @@ fn print(grid: &HashMap<Coord, i64>) {
             let c = grid.get(&Coord::new(x,y)).or(Some(&3)).unwrap();
             match c {
                 0 => print!("\u{2588}"),
-                1 => print!(" "),
+                1 => {let d = dists.get(&Coord::new(x,y)).unwrap(); print!("{}", d % 10)},
                 2 => print!("$"),
                 _ => print!("_"),
             }
@@ -106,13 +106,29 @@ fn main() {
     dist.insert(pos, 0);
     let mut direction = Coord::new(0, 1);
     let mut distance = 0;
+    let mut maxdist = 0;
 
     loop {
         match check_wall(direction, &mut grid, &mut game, pos) {
             0 => direction.turn_right(),
             1 => {pos = pos.plus(direction); direction.turn_left(); distance = update_dist(&mut dist, distance, pos)},
-            2 => {println!("{:?} {}", pos.plus(direction), distance + 1); break},
+            2 => {println!("Part 1: {}", distance + 1); break},
             _ => panic!()
+        }
+    }
+
+    dist = HashMap::new();
+    distance = 0;
+
+    loop {
+        match check_wall(direction, &mut grid, &mut game, pos) {
+            0 => direction.turn_right(),
+            1 => {pos = pos.plus(direction); direction.turn_left(); distance = update_dist(&mut dist, distance, pos)},
+            2 => {println!("Part 2: {}", maxdist); break},
+            _ => panic!()
+        };
+        if distance > maxdist {
+            maxdist = distance;
         }
     }
 }
