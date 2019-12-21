@@ -23,25 +23,40 @@ fn str_to_map(input: &str) -> HashMap<i64,i64> {
 
 fn main() {
     let input = parse("day21.input").unwrap();
-    let mut program = intcode::Program::new(&input);
+    let mut part1 = intcode::Program::new(&input);
 
-    program.give_ascii_input("NOT D J");
-    program.give_ascii_input("NOT J J");
-    program.give_ascii_input("NOT C T");
-    program.give_ascii_input("AND T J");
-    program.give_ascii_input("NOT A T");
-    program.give_ascii_input("OR T J");
+    part1.give_ascii_input("NOT D J");
+    part1.give_ascii_input("NOT J J");
+    part1.give_ascii_input("NOT C T");
+    part1.give_ascii_input("AND T J");
+    part1.give_ascii_input("NOT A T");
+    part1.give_ascii_input("OR T J");
 
-    program.give_ascii_input("WALK");
-    program.run();
-    /*
-    for out in program.get_all_output() {
-        if out == 10 {
-            println!();
-        } else {
-            print!("{}", std::str::from_utf8(&[out as u8]).unwrap());
-        }
-    }
-    */
-    println!("Part 1: {}", program.get_all_output().last().unwrap());
+    part1.give_ascii_input("WALK");
+    part1.run();
+    println!("Part 1: {}", part1.get_all_output().last().unwrap());
+
+    let mut part2 = intcode::Program::new(&input);
+
+    // (E or H) and (D and not C)
+    part2.give_ascii_input("NOT E J");
+    part2.give_ascii_input("NOT J J");
+    part2.give_ascii_input("OR H J");
+    part2.give_ascii_input("AND D J");
+    part2.give_ascii_input("NOT C T");
+    part2.give_ascii_input("AND T J");
+
+    // OR not B and D and H
+    part2.give_ascii_input("NOT B T");
+    part2.give_ascii_input("AND D T");
+    part2.give_ascii_input("AND H T");
+    part2.give_ascii_input("OR T J");
+
+    // OR not A
+    part2.give_ascii_input("NOT A T");
+    part2.give_ascii_input("OR T J");
+
+    part2.give_ascii_input("RUN");
+    part2.run();
+    println!("Part 2: {}", part2.get_all_output().last().unwrap());
 }
