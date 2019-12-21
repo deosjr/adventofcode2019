@@ -4,7 +4,7 @@ use std::io::Read;
 use std::str::FromStr;
 use std::collections::HashMap;
 
-mod intcode;
+pub mod intcode;
 
 fn parse(filename: &str) -> io::Result<HashMap<i64,i64>> {
     let mut file = File::open(filename)?;
@@ -21,31 +21,33 @@ fn str_to_map(input: &str) -> HashMap<i64,i64> {
     m
 }
 
-#[derive(PartialEq,Eq,Hash,Debug,Clone,Copy)]
-struct Coord {
-    x: i64,
-    y: i64
-}
-
-impl Coord {
-    fn new(x: i64, y: i64) -> Coord {
-        Coord{x:x, y:y}
-    }
+fn in_tractor_beam(input: &HashMap<i64,i64>, x:i64, y:i64) -> bool {
+    let mut program = intcode::Program::new(&input);
+    program.give_input(x);
+    program.give_input(y);
+    program.run();
+    program.get_output().unwrap() == 1
 }
 
 fn main() {
-    let mut input = parse("day19.input").unwrap();
+    let input = parse("day19.input").unwrap();
     let mut sum = 0;
     for y in 0..50 {
         for x in 0..50 {
-            let mut program = intcode::Program::new(&input);
-            program.give_input(x);
-            program.give_input(y);
-            program.run();
-            if program.get_output().unwrap() == 1 {
+            if in_tractor_beam(&input, x, y) {
                 sum += 1;
             }
         }
     }
     println!("Part 1: {}", sum);
+
+    // bounds found by experimentation...
+    for yo in 1450..1500 {
+        for xo in 1200..1250 {
+            if in_tractor_beam(&input, xo+99, yo) && in_tractor_beam(&input, xo, yo+99) {
+                println!("Part 2: {}", xo*10000 +  yo);
+                return
+            }
+        }
+    }
 }

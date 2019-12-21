@@ -28,6 +28,13 @@ impl Program {
         self.input.push_back(i);
     }
 
+    pub fn give_ascii_input(&mut self, s: &str) {
+        for c in s.chars() {
+            self.input.push_back(c as i64);
+        }
+        self.input.push_back(10);
+    }
+
     pub fn get_output(&mut self) -> Option<i64> {
         self.output.pop_front()
     }

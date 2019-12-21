@@ -4,7 +4,7 @@ use std::io::Read;
 use std::str::FromStr;
 use std::collections::HashMap;
 
-mod intcode;
+pub mod intcode;
 
 fn parse(filename: &str) -> io::Result<HashMap<i64,i64>> {
     let mut file = File::open(filename)?;
@@ -56,7 +56,7 @@ fn main() {
     let mut grid = HashMap::new();
     p1.run();
     let (mut x, mut y) = (0, 0);
-    let (mut maxx, mut maxy) = (-1, -1);
+    let mut maxx = -1;
     for out in p1.get_all_output() {
         if out == 10 {
             y += 1;
@@ -64,69 +64,28 @@ fn main() {
                 maxx=x;
             }
             x = 0;
-            println!();
             continue
         }
         if out == 35 {
             grid.insert(Coord::new(x,y), out);
         }
         x+=1;
-        print!("{}", std::str::from_utf8(&[out as u8]).unwrap())
     }
-    maxy = y;
-    println!("{},{}", maxx, maxy);
+    let maxy = y;
     println!("Part 1: {}", part1(&grid, maxx, maxy));
 
     input.insert(0, 2);
     let mut p2 = intcode::Program::new(&input);
 
-    // A B A C A B C A B C
-    let main = vec![65, 44, 66, 44, 65, 44, 67, 44, 65, 44, 66, 44, 67, 44, 65, 44, 66, 44, 67, 10]; 
-    // R 8 R 1 0 R 1 0
-    let a = vec![82, 44, 56, 44, 82, 44, 49, 48, 44, 82, 44, 49, 48, 10]; 
-    // R 4 R 8 R 1 0 R 1 2
-    let b = vec![82, 44, 52, 44, 82, 44, 56, 44, 82, 44, 49, 48, 44, 82, 44, 49, 50, 10]; 
-    // R 1 2 R 4 L 1 2 L 1 2
-    let c = vec![82, 44, 49, 50, 44, 82, 44, 52, 44, 76, 44, 49, 50, 44, 76, 44, 49, 50, 10]; 
-
-    for x in main.iter() {
-        p2.give_input(*x);
-    }
-    for x in a.iter() {
-        p2.give_input(*x);
-    }
-    for x in b.iter() {
-        p2.give_input(*x);
-    }
-    for x in c.iter() {
-        p2.give_input(*x);
-    }
+    p2.give_ascii_input("A,B,A,C,A,B,C,A,B,C");
+    p2.give_ascii_input("R,8,R,10,R,10");
+    p2.give_ascii_input("R,4,R,8,R,10,R,12");
+    p2.give_ascii_input("R,12,R,4,L,12,L,12");
 
     p2.give_input(110);
     p2.give_input(10);
-    /*
-    p2.give_input(65);
-    p2.give_input(10);
-    p2.give_input(82);
-    p2.give_input(10);
-    p2.give_input(82);
-    p2.give_input(10);
-    p2.give_input(82);
-    p2.give_input(10);
-    p2.give_input(110);
-    p2.give_input(10);
-    */
 
     p2.run();
 
-    for out in p2.get_all_output() {
-        if out == 10 {
-            println!();
-            continue
-        }
-        match std::str::from_utf8(&[out as u8]) {
-            Ok(s) => print!("{}", s),
-            Err(_) => println!("{}", out)
-        }
-    }
+    println!("Part 2: {}", p2.get_all_output().last().unwrap());
 }
