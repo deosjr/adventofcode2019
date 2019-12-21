@@ -46,16 +46,34 @@ fn phase(signal: Vec<i32>) -> Vec<i32> {
     output
 }
 
+fn phase2(signal: Vec<i32>) -> Vec<i32> {
+    let mut newphase = signal.clone();
+    let mut sum = 0;
+    for i in (0..signal.len()).rev() {
+        sum = (sum + signal[i]) % 10;
+        newphase[i] = sum;
+    }
+    newphase
+}
+
 fn main() {
-    let mut input = parse("day16.input").unwrap();
+    let input = parse("day16.input").unwrap();
+    let mut part1 = input.clone();
     for _ in 0..100 {
-        input = phase(input);
+        part1 = phase(part1);
     }
-    print!("Part 1: ");
-    for x in input[0..8].iter() {
-        print!("{}", x);
+    println!("Part 1: {}", part1.iter().take(8).map(|&d| d.to_string()).collect::<String>());
+
+    let offset = input.iter().take(7).map(|&d| d.to_string()).collect::<String>().parse::<i32>().unwrap();
+    let mut part2 = input.clone();
+    for _ in 1..10000 {
+        part2.extend(input.clone());
     }
-    println!();
+    part2 = part2.iter().skip(offset as usize).map(|&x| x).collect();
+    for _ in 0..100 {
+        part2 = phase2(part2);
+    }
+    println!("Part 2: {}", part2.iter().take(8).map(|&d| d.to_string()).collect::<String>());
 }
 
 #[test]
@@ -86,4 +104,18 @@ fn test_longer_phase() {
         input = phase(input);
     }
     assert_eq!(input[0..8], [2,4,1,7,6,1,7,6]);
+}
+
+#[test]
+fn test_part2() {
+    let input = vec![0,3,0,3,6,7,3,2,5,7,7,2,1,2,9,4,4,0,6,3,4,9,1,5,6,5,4,7,4,6,6,4]; 
+    let mut part2 = input.clone();
+    for _ in 1..10000 {
+        part2.extend(input.clone());
+    }
+    part2 = part2.iter().skip(303673).map(|&x| x).collect();
+    for _ in 0..100 {
+        part2 = phase2(part2);
+    }
+    assert_eq!(part2[0..8], [8,4,4,6,2,0,2,6]);
 }
