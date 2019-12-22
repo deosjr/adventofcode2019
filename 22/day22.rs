@@ -3,47 +3,67 @@ use std::io;
 use std::io::prelude::*;
 use std::str::FromStr;
 
-fn read_file(filename: &str) -> Vec<String> {
+fn read_file(filename: &str) -> Vec<(fn(i64,i64,i64)->i64, i64)> {
     let file = File::open(filename).expect("");
     let reader = io::BufReader::new(file);
-    reader.lines().map(|l| l.unwrap()).collect::<Vec<String>>()
-}
-
-
-fn main() {
-    let input = read_file("day22.input");
-    let mut i = 2019;
-    let len = 10007;
-    for s in input {
-        let mut split = s.split(' ');
+    let mut f: Vec<(fn(i64,i64,i64)->i64, i64)> = vec![];
+    for line in reader.lines() {
+        let line = line.unwrap();
+        let mut split = line.split(' ');
         let first = split.next().unwrap();
         let last = split.last().unwrap();
         if last == "stack" {
-            let pivot = len / 2;
-            i = 2*pivot - i;
+            f.push( (stack, 0) );
             continue
         }
-        let mut n = i32::from_str(&last).unwrap();
+        let n = i64::from_str(&last).unwrap();
         if first == "cut" {
-            if n > 0 {
-                if n < i {
-                    i -= n;
-                } else {
-                    i = len - n + i;
-                }
-            } else {
-                n = n.abs();
-                if n < len - i {
-                    i += n;
-                } else {
-                    i = n - len + i;
-                }
-            }
+            f.push( (cut, n) );
             continue
         }
         if first == "deal" {
-            i = (n * i) % len;
+            f.push( (deal, n) );
         }
     }
-    println!("Part 1: {}", i);
+    f
+}
+
+fn stack(index: i64, len: i64, _: i64) -> i64 {
+    len - 1 - index
+}
+
+fn cut(index: i64, len: i64, mut n: i64) -> i64 {
+    if n < 0 {
+        n += len;
+    }
+    let mut ans = index - n;
+    if n >= index {
+        ans += len;
+    }
+    ans
+}
+
+fn deal(index: i64, len: i64, n: i64) -> i64 {
+    (n * index) % len
+}
+
+fn shuffle(index: i64, len: i64, shufflefuncs: &Vec<(fn(i64,i64,i64)->i64, i64)>) -> i64 {
+    let mut i = index;
+    for (f, n) in shufflefuncs {
+        i = f(i, len, *n);
+    }
+    i
+}
+
+fn main() {
+    let shufflefuncs = read_file("day22.input");
+    println!("Part 1: {}", shuffle(2019, 10007, &shufflefuncs));
+
+    //let times: i64 = 101741582076661;
+    let mut i = 2020;
+    for _ in 0..10 {
+        i = shuffle(i, 119315717514047, &shufflefuncs);
+        println!("{} ", i);
+    }
+    //println!("Part 2: {}", i);
 }
