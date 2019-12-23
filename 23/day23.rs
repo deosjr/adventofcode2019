@@ -5,6 +5,7 @@ use std::str::FromStr;
 use std::collections::HashMap;
 use std::thread;
 use std::sync::mpsc;
+use std::time::Duration;
 
 pub mod intcode;
 
@@ -80,17 +81,30 @@ fn main() {
         threads.push(t);
     }
 
+    let mut nat = Coord::new(-1, -1);
+    let mut lasty = -1;
+
     loop {
-        let message = main_rx.recv().unwrap();
-        println!("{:?}", message);
-        sends[message.address].send(message.coord);
+        let recv = main_rx.recv_timeout(Duration::from_millis(100));
+        match recv {
+            Ok(message) => {
+                if message.address == 255 {
+                    if nat.x == -1 && nat.y == -1 {
+                        println!("Part 1: {}", message.coord.y);
+                    }
+                    nat = message.coord;
+                    continue
+                }
+                sends[message.address].send(message.coord);
+            },
+            Err(_) => {
+                if nat.y == lasty {
+                    println!("Part 2: {}", lasty);
+                    break
+                }
+                sends[0].send(Coord::new(nat.x, nat.y));
+                lasty = nat.y;
+            },
+        }
     }
-
-    /*
-    for t in threads {
-        t.join().expect("thread failed");
-    }
-    */
-
-    //println!("Part 2: {}", part2.get_all_output().last().unwrap());
 }
