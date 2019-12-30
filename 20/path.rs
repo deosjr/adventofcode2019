@@ -1,5 +1,6 @@
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
+use std::cmp::Ordering;
 
 pub trait Map {
     type Node;
@@ -8,7 +9,7 @@ pub trait Map {
     fn h(&self, n: Self::Node, goal: Self::Node) -> i64;
 }
 
-#[derive(Debug,Ord,PartialOrd,Eq,PartialEq)]
+#[derive(PartialEq, Eq)]
 struct PQItem<N> {
     fscore: i64,
     node: N
@@ -20,6 +21,18 @@ impl<N> PQItem<N> {
             fscore: fscore,
             node:   node,
         }
+    }
+}
+
+impl<N> Ord for PQItem<N> where N: Eq + PartialEq {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.fscore.cmp(&other.fscore)
+    }
+}
+
+impl<N> PartialOrd for PQItem<N> where N: Eq + PartialEq {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other).reverse())
     }
 }
 
@@ -67,7 +80,7 @@ pub fn find_route<T,N>(map: T, start: N, goal: N) -> Option<Vec<N>>
             if !open_set.contains_key(&n) && interesting_f && f < goal_score {
                 open_set.insert(n, true);
                 pq.push(PQItem::new(n, f));
-            } else if tentative_gscore >= *(g_score.get(&n).unwrap()) {
+            } else if tentative_gscore >= *(g_score.get(&n).or(Some(&0)).unwrap()) {
                 continue
             }
             came_from.insert(n, current);
@@ -75,6 +88,7 @@ pub fn find_route<T,N>(map: T, start: N, goal: N) -> Option<Vec<N>>
             f_score.insert(n, f);
         }
     }
+
     if goal_score == std::i64::MAX {
         None
     } else {

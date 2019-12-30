@@ -10,41 +10,41 @@ fn parse(filename: &str) -> Vec<String> {
     let reader = io::BufReader::new(file);
     reader.lines().map(|l| l.unwrap()).collect::<Vec<String>>() }
 
-#[derive(Debug,Ord,PartialOrd,Eq,PartialEq,Hash,Copy,Clone)]
-struct NodeP1 {
+#[derive(Ord,PartialOrd,Eq,PartialEq,Hash,Copy,Clone)]
+struct Point {
     x: i64,
     y: i64
 }
 
-impl NodeP1 {
-    fn new(x: i64, y: i64) -> NodeP1 {
-        NodeP1{x: x, y: y}
+impl Point {
+    fn new(x: i64, y: i64) -> Point {
+        Point{x: x, y: y}
     }
 }
 
-struct Donut {
-    coords: HashMap<NodeP1,Tile>
+fn von_neumann_neighbours(p: Point) -> [Point; 4] {
+    [ Point::new(p.x + 1, p.y),
+      Point::new(p.x - 1, p.y),
+      Point::new(p.x, p.y + 1),
+      Point::new(p.x, p.y - 1) ]
 }
 
-impl path::Map for Donut {
-    type Node = NodeP1; 
+struct DonutP1<'a> {
+    coords: &'a HashMap<Point,Tile>
+}
+
+impl<'a> path::Map for DonutP1<'a> {
+    type Node = Point; 
     fn neighbours(&self, n: Self::Node) -> Vec<Self::Node> {
         let mut neighbours: Vec<Self::Node> = vec![];
-        let npoints = [ NodeP1::new(n.x + 1, n.y),
-                        NodeP1::new(n.x - 1, n.y),
-                        NodeP1::new(n.x, n.y + 1),
-                        NodeP1::new(n.x, n.y - 1) ];
-        for p in npoints.iter() {
-            match self.coords.get(&p) {
-                Some(t) => {
-                    neighbours.push(t.point);
-                },
-                None => continue
+        for p in von_neumann_neighbours(n).iter() {
+            if self.coords.contains_key(&p) {
+                neighbours.push(*p);
             }
         }
-        let t = self.coords.get(&n).unwrap();
-        if t.warp.x != 0 && t.warp.y != 0 {
-            neighbours.push(t.warp);
+        match self.coords.get(&n).unwrap().warp {
+            Some(p) => neighbours.push(p),
+            None => (),
         }
         neighbours
     }
@@ -58,22 +58,74 @@ impl path::Map for Donut {
     }
 }
 
-struct Tile {
-    point: NodeP1,
-    warp:  NodeP1
+struct DonutP2<'a> {
+    coords: &'a HashMap<Point,Tile>
 }
 
-impl Tile {
-    fn new(p: NodeP1) -> Tile {
-        Tile{point: p, warp: NodeP1::new(0,0)}
+#[derive(Ord,PartialOrd,Eq,PartialEq,Hash,Copy,Clone)]
+struct PointLevel {
+    point: Point,
+    level: i32
+}
+
+impl PointLevel {
+    fn new(p: Point, l: i32) -> PointLevel {
+        PointLevel{point: p, level: l}
     }
 }
 
-fn connect_portals(m: &mut HashMap<NodeP1,Tile>, labels: &mut HashMap<String,NodeP1>, label: String, p1: NodeP1) {
+impl<'a> path::Map for DonutP2<'a> {
+    type Node = PointLevel; 
+    fn neighbours(&self, n: Self::Node) -> Vec<Self::Node> {
+        let mut neighbours: Vec<Self::Node> = vec![];
+        for p in von_neumann_neighbours(n.point).iter() {
+            if self.coords.contains_key(&p) {
+                neighbours.push(PointLevel::new(*p, n.level));
+            }
+        }
+        let t = self.coords.get(&n.point).unwrap();
+        match t.warp {
+            Some(p) => {
+                if t.outer {
+                    if n.level == 0 {
+                        return neighbours;
+                    }
+                    neighbours.push(PointLevel::new(p, n.level-1));
+                } else {
+                    neighbours.push(PointLevel::new(p, n.level+1));
+                }
+            },
+            None => (),
+        }
+        neighbours
+    }
+
+    fn g(&self, _n: Self::Node, _neighbour: Self::Node) -> i64 { 1 }
+
+    fn h(&self, n: Self::Node, goal: Self::Node) -> i64 {
+        let dx = goal.point.x - n.point.x;
+        let dy = goal.point.y - n.point.y;
+        // going deeper should be more costly (100 is arbitrary)
+        dx.abs() + dy.abs() + (n.level as i64) * 100
+    }
+}
+
+struct Tile {
+    warp:  Option<Point>,
+    outer: bool
+}
+
+impl Tile {
+    fn new() -> Tile {
+        Tile{warp: None, outer: false}
+    }
+}
+
+fn connect_portals(m: &mut HashMap<Point,Tile>, labels: &mut HashMap<String,Point>, label: String, p1: Point, outer: bool) {
     match labels.get(&label) {
         Some(&p2) => {
-            m.insert(p1, Tile{point: p1, warp: p2});
-            m.insert(p2, Tile{point: p2, warp: p1});
+            m.insert(p1, Tile{warp: Some(p2), outer: outer});
+            m.insert(p2, Tile{warp: Some(p1), outer: !outer});
         },
         None => {labels.insert(label, p1); ()}
     }
@@ -101,16 +153,16 @@ fn main() {
     let innerright = outerright - yoff + 1;
     let innerbottom = outerbottom - yoff + 1;
     
-    let mut m: HashMap<NodeP1,Tile> = HashMap::new();
-    let mut labels: HashMap<String,NodeP1> = HashMap::new();
+    let mut m: HashMap<Point,Tile> = HashMap::new();
+    let mut labels: HashMap<String,Point> = HashMap::new();
     for (y, line) in grid.iter().enumerate() {
         for (x, r) in line.chars().enumerate() {
             if r == '#' || r == ' ' {
                 continue
             }
-            let p = NodeP1::new(x as i64, y as i64);
+            let p = Point::new(x as i64, y as i64);
             if r == '.' {
-                m.insert(p, Tile::new(p));
+                m.insert(p, Tile::new());
             }
             if y > innertop && y < innerbottom {
                 if x == outerleft || x == innerright {
@@ -118,7 +170,7 @@ fn main() {
                     let l1 = grid.get(y).unwrap().chars().nth(x-2).unwrap();
                     let l2 = grid.get(y).unwrap().chars().nth(x-1).unwrap();
                     let label = format!("{}{}", l1, l2);
-                    connect_portals(&mut m, &mut labels, label, p);
+                    connect_portals(&mut m, &mut labels, label, p, x == outerleft);
                     continue
                 }
                 if x == outerright || x == innerleft {
@@ -126,7 +178,7 @@ fn main() {
                     let l1 = grid.get(y).unwrap().chars().nth(x+1).unwrap();
                     let l2 = grid.get(y).unwrap().chars().nth(x+2).unwrap();
                     let label = format!("{}{}", l1, l2);
-                    connect_portals(&mut m, &mut labels, label, p);
+                    connect_portals(&mut m, &mut labels, label, p, x == outerright);
                     continue
                 }
             }
@@ -136,7 +188,7 @@ fn main() {
                     let l1 = grid.get(y-2).unwrap().chars().nth(x).unwrap();
                     let l2 = grid.get(y-1).unwrap().chars().nth(x).unwrap();
                     let label = format!("{}{}", l1, l2);
-                    connect_portals(&mut m, &mut labels, label, p);
+                    connect_portals(&mut m, &mut labels, label, p, y == outertop);
                     continue
                 }
                 if y == outerbottom || y == innertop {
@@ -144,16 +196,19 @@ fn main() {
                     let l1 = grid.get(y+1).unwrap().chars().nth(x).unwrap();
                     let l2 = grid.get(y+2).unwrap().chars().nth(x).unwrap();
                     let label = format!("{}{}", l1, l2);
-                    connect_portals(&mut m, &mut labels, label, p);
+                    connect_portals(&mut m, &mut labels, label, p, y == outerbottom);
                 }
             }
         }
     }
 
-    let dm = Donut{coords: m};
+    let dm = DonutP1{coords: &m};
+    let start = *(labels.get("AA").unwrap());
+    let end = *(labels.get("ZZ").unwrap());
+    println!("Part 1: {}", path::find_route(dm, start, end).unwrap().len() - 1);
 
-    let start = labels.get("AA").unwrap();
-    let end = labels.get("ZZ").unwrap();
-
-    println!("Part 1: {}", path::find_route(dm, *start, *end).unwrap().len() - 1);
+    let dm2 = DonutP2{coords: &m};
+    let start2 = PointLevel::new(start, 0);
+    let end2 = PointLevel::new(end, 0);
+    println!("Part 2: {}", path::find_route(dm2, start2, end2).unwrap().len() - 1);
 }
